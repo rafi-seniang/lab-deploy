@@ -1,0 +1,7 @@
+# Installed as /etc/cron.d/lab by server/install-cron.sh. Times are the cinema's.
+CRON_TZ=Asia/Jakarta
+SHELL=/bin/bash
+# This week's showtimes, Monday to Sunday, every Monday just after midnight
+5 0 * * 1 rafilab cd /srv/lab/deploy && docker compose run --rm --no-deps tiketa-api python scripts/publish_week.py >> /srv/lab/cron.log 2>&1
+# A dump of every database each night, seven kept
+30 2 * * * rafilab cd /srv/lab/deploy && ./backup.sh >> /srv/lab/cron.log 2>&1

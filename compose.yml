@@ -1,0 +1,115 @@
+# Everything rafilab.com serves, on one host. No port is published: the Cloudflare Tunnel reaches `edge` from inside.
+name: lab
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  cloudflared:
+    <<: *restart
+    image: cloudflare/cloudflared:2026.10.7
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    depends_on: [edge]
+
+  # One host name, one path per site: /, /tiketa/, /tiketa/api/, /tiketa/agent/
+  edge:
+    <<: *restart
+    image: caddy:2.11.7-alpine
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+
+  postgres:
+    <<: *restart
+    image: postgres:17.11-alpine
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: tiketa
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab -d tiketa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    <<: *restart
+    image: redis:7.4-alpine
+    command: redis-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  lab-web:
+    <<: *restart
+    build:
+      context: ./src/ai-engineering-lab
+      args:
+        VITE_TIKETA_URL: ${SITE_URL}/tiketa/api
+        VITE_TIKETA_SITE_URL: ${SITE_URL}/tiketa/
+
+  tiketa-web:
+    <<: *restart
+    build:
+      context: ./src/tiketa-app/web
+      args:
+        VITE_BASE_PATH: /tiketa/
+        VITE_TIKETA_API_URL: ${SITE_URL}/tiketa/api
+        VITE_TIKETA_AGENT_URL: ${SITE_URL}/tiketa/agent
+
+  tiketa-api:
+    <<: *restart
+    build:
+      context: ./src/tiketa-app
+    environment:
+      ENVIRONMENT: production
+      API_KEYS: ${TIKETA_API_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+      CORS_ORIGINS: '["${SITE_URL}"]'
+      DATABASE_URL: postgresql+psycopg://lab:${POSTGRES_PASSWORD}@postgres:5432/tiketa
+      REDIS_URL: redis://redis:6379/0
+      RATE_LIMIT_PER_MINUTE: 60
+      MCP_ENABLED: "true"
+      # Visitors' own assistants book without a key, as one anonymous caller
+      MCP_PUBLIC: "true"
+      MCP_PUBLIC_RATE_LIMIT_PER_MINUTE: 300
+      # Only `edge` can reach this container, so its forwarded client address is trusted
+      FORWARDED_ALLOW_IPS: "*"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  tiketa-agent:
+    <<: *restart
+    build:
+      context: ./src/tiketa-booking-agent
+    # One worker: the model stack is the largest thing in memory on this host
+    command: sh -c "uvicorn main:app --host 0.0.0.0 --port 8060 --proxy-headers --no-access-log --workers 1"
+    environment:
+      ENVIRONMENT: production
+      CORS_ORIGINS: '["${SITE_URL}"]'
+      BOOKING_API_URL: http://tiketa-api:8070
+      BOOKING_API_KEY: ${TIKETA_API_KEY}
+      DATABASE_URL: postgresql+psycopg://lab:${POSTGRES_PASSWORD}@postgres:5432/tiketa_agent
+      REDIS_URL: redis://redis:6379/1
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      LLM_MODEL: deepseek/deepseek-flash
+      LLM_REASONING_EFFORT: low
+      # The day's model bill is capped here, and by the prepaid balance of this host's own key
+      DAILY_TOKENS_PER_CALLER: 150000
+      DAILY_TOKENS_TOTAL: 1000000
+      PHOENIX_COLLECTOR_ENDPOINT: ""
+      FORWARDED_ALLOW_IPS: "*"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      tiketa-api: { condition: service_healthy }
+
+volumes:
+  postgres-data:

@@ -1,0 +1,35 @@
+# Plain HTTP inside the host. Cloudflare ends TLS and the tunnel brings requests here.
+{
+	auto_https off
+	admin off
+	servers {
+		# cloudflared arrives from the compose network, so its X-Forwarded-For is the visitor's address
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
+	encode gzip
+
+	# The booking API and its MCP server at /tiketa/api/mcp/
+	handle_path /tiketa/api/* {
+		reverse_proxy tiketa-api:8070
+	}
+
+	# The chat agent streams its replies, so nothing is buffered
+	handle_path /tiketa/agent/* {
+		reverse_proxy tiketa-agent:8060 {
+			flush_interval -1
+		}
+	}
+
+	redir /tiketa /tiketa/ 308
+	handle_path /tiketa/* {
+		reverse_proxy tiketa-web:8080
+	}
+
+	# The Lab is the site itself
+	handle {
+		reverse_proxy lab-web:8080
+	}
+}
