@@ -43,6 +43,7 @@ echo "== services"
 docker compose up -d --wait tiketa-api
 docker compose run --rm --no-deps tiketa-agent alembic upgrade head
 docker compose up -d --wait --remove-orphans
+docker compose restart edge
 
 echo "== checks, through the edge as a visitor's request arrives"
 check() { # path, text the answer must contain
