@@ -33,6 +33,11 @@
 		reverse_proxy dispatch-api:8010
 	}
 
+	# Gatekeeper (LLM security gateway API)
+	handle_path /gatekeeper/api/* {
+		reverse_proxy gatekeeper-api:8020
+	}
+
 	# Lens (multimodal vector search API and photographs)
 	handle_path /lens/api/* {
 		reverse_proxy lens-api:8030

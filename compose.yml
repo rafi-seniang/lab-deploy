@@ -13,7 +13,7 @@ services:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN}
     depends_on: [edge]
 
-  # One host name, one path per site: /, /dispatch/api/, /lens/api/, /tiketa/, /tiketa/api/, /tiketa/agent/
+  # One host name, one path per site: /, /dispatch/api/, /gatekeeper/api/, /lens/api/, /tiketa/, /tiketa/api/, /tiketa/agent/
   edge:
     <<: *restart
     image: caddy:2.11.7-alpine
@@ -52,6 +52,7 @@ services:
       context: ./src/ai-engineering-lab
       args:
         VITE_PILAH_URL: ${SITE_URL}/dispatch/api
+        VITE_GATEKEEPER_URL: ${SITE_URL}/gatekeeper/api
         VITE_LENS_URL: ${SITE_URL}/lens/api
         VITE_TIKETA_URL: ${SITE_URL}/tiketa/api
         VITE_TIKETA_SITE_URL: ${SITE_URL}/tiketa/
@@ -185,6 +186,48 @@ services:
       redis: { condition: service_healthy }
       lens-typesense: { condition: service_healthy }
 
+  gatekeeper-api:
+    <<: *restart
+    build:
+      context: ./src/gatekeeper-llm-gateway
+    command: sh -c "uvicorn main:app --host 0.0.0.0 --port 8020 --proxy-headers --no-access-log --workers 1"
+    environment:
+      ENVIRONMENT: production
+      CORS_ORIGINS: '["${SITE_URL}"]'
+      UPSTREAM_BASE_URL: https://api.deepseek.com
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      SMALL_MODEL: deepseek-flash
+      STRONG_MODEL: deepseek-v4-pro
+      DECISION_PROTOCOL: openai_logprobs
+      DECISION_BASE_URL: https://api.deepseek.com
+      DECISION_MODEL: deepseek-flash
+      INJECTION_GUARD: jev
+      JEV_API_KEY: ${JEV_API_KEY}
+      JEV_MODEL: jev-1.14.0
+      BLOCK_FROM_INJECTION_PROBABILITY: 0.98
+      AGENT_GUARD_ENABLED: "true"
+      IDENTIFIER_MODEL: AIbnuHibban/indopii-base
+      IDENTIFIER_MODEL_REVISION: 4e12679e7bdb6505a495f7dfab9ab01565d1d109
+      IDENTIFIER_SPAN_THRESHOLD: 0.5
+      IDENTIFIER_THREADS: 2
+      DEVICE: cpu
+      REDIS_URL: redis://redis:6379/4
+      RATE_LIMIT_PER_MINUTE: 120
+      DAILY_REQUESTS_PER_CALLER: 40
+      DAILY_REQUESTS_TOTAL: 300
+      FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      - gatekeeper-hf-cache:/home/app/.cache/huggingface
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8020/health', timeout=3)\""]
+      start_period: 90s
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      redis: { condition: service_healthy }
+
 volumes:
   postgres-data:
   lens-typesense-data:
+  gatekeeper-hf-cache:
