@@ -102,6 +102,9 @@ services:
       DATABASE_URL: postgresql+psycopg://lab:${POSTGRES_PASSWORD}@postgres:5432/tiketa_agent
       REDIS_URL: redis://redis:6379/1
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_API_KEY_2: ${GEMINI_API_KEY_2:-}
+      GEMINI_API_KEY_3: ${GEMINI_API_KEY_3:-}
       LLM_MODEL: deepseek/deepseek-flash
       LLM_REASONING_EFFORT: low
       # The day's model bill is capped here, and by the prepaid balance of this host's own key
@@ -208,20 +211,18 @@ services:
       INJECTION_GUARD: jev
       JEV_API_KEY: ${JEV_API_KEY}
       JEV_MODEL: jev-1.14.0
-      BLOCK_FROM_INJECTION_PROBABILITY: 0.98
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_API_KEY_2: ${GEMINI_API_KEY_2:-}
+      GEMINI_API_KEY_3: ${GEMINI_API_KEY_3:-}
+      BLOCK_FROM_INJECTION_PROBABILITY: 0.90
+      BLOCK_FROM_OFF_TOPIC_PROBABILITY: 0.90
+      MASK_IDENTIFIERS_ENABLED: "false"
       AGENT_GUARD_ENABLED: "true"
-      IDENTIFIER_MODEL: AIbnuHibban/indopii-base
-      IDENTIFIER_MODEL_REVISION: 4e12679e7bdb6505a495f7dfab9ab01565d1d109
-      IDENTIFIER_SPAN_THRESHOLD: 0.5
-      IDENTIFIER_THREADS: 2
-      DEVICE: cpu
       REDIS_URL: redis://redis:6379/4
       RATE_LIMIT_PER_MINUTE: 120
       DAILY_REQUESTS_PER_CALLER: 40
       DAILY_REQUESTS_TOTAL: 300
       FORWARDED_ALLOW_IPS: "*"
-    volumes:
-      - gatekeeper-hf-cache:/home/app/.cache/huggingface
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8020/health', timeout=3)\""]
       start_period: 90s
@@ -234,4 +235,3 @@ services:
 volumes:
   postgres-data:
   lens-typesense-data:
-  gatekeeper-hf-cache:
