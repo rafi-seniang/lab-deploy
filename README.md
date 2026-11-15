@@ -5,19 +5,21 @@ open to the internet except SSH.
 
 ```
 visitor ── HTTPS ──► Cloudflare ── tunnel ──► cloudflared ──► edge (Caddy)
-                                                              ├─ /                 lab-web       the Lab (portfolio, /dispatch, /lens)
-                                                              ├─ /dispatch/api/    dispatch-api  Dispatch (Jev default + Gemini Decision 1)
-                                                              ├─ /lens/api/        lens-api      Lens (Gemini Embedding 2 + Typesense)
-                                                              ├─ /tiketa/          tiketa-web    cinema booking site
-                                                              ├─ /tiketa/api/      tiketa-api    booking API, MCP at /tiketa/api/mcp/
-                                                              └─ /tiketa/agent/    tiketa-agent  LangGraph chat agent
-                                              postgres (tiketa, tiketa_agent)   redis (DB 0..3)   lens-typesense (27.1)
+                                                              ├─ /                 lab-web         the Lab (portfolio, /dispatch, /gatekeeper, /lens)
+                                                              ├─ /dispatch/api/    dispatch-api    Dispatch (Jev default + Gemini Decision 1)
+                                                              ├─ /gatekeeper/api/  gatekeeper-api  Gatekeeper (IndoPII masking + Jev guard)
+                                                              ├─ /lens/api/        lens-api        Lens (Gemini Embedding 2 + Typesense)
+                                                              ├─ /tiketa/          tiketa-web      cinema booking site
+                                                              ├─ /tiketa/api/      tiketa-api      booking API, MCP at /tiketa/api/mcp/
+                                                              └─ /tiketa/agent/    tiketa-agent    LangGraph chat agent
+                                              postgres (tiketa, tiketa_agent)   redis (DB 0..4)   lens-typesense (27.1)
 ```
 
 | Repository | What runs from it |
 |---|---|
 | [ai-engineering-lab](https://github.com/rafi-seniang/ai-engineering-lab) | `lab-web` |
 | [dispatch-system1-router](https://github.com/rafi-seniang/dispatch-system1-router) | `dispatch-api` |
+| [gatekeeper-llm-gateway](https://github.com/rafi-seniang/gatekeeper-llm-gateway) | `gatekeeper-api` |
 | [lens-multimodal-search](https://github.com/rafi-seniang/lens-multimodal-search) | `lens-api` |
 | [tiketa-app](https://github.com/rafi-seniang/tiketa-app) | `tiketa-api`, `tiketa-web` |
 | [tiketa-booking-agent](https://github.com/rafi-seniang/tiketa-booking-agent) | `tiketa-agent` |
@@ -68,5 +70,5 @@ Change a commit in `refs.env`, push, then on the host:
 
 - Backups stay on the host (`postgres` dumps via `backup.sh`), while `data/lens/uploads/` lives only in `./data/lens`.
 - No uptime check from outside.
-- Gatekeeper and Ledger are not deployed yet: Gatekeeper waits on its switches and caps, and Ledger needs a VLM API key or GPU.
+- Ledger and Footfall are marked In Maintenance on the Lab: Ledger is being redesigned around Jev decision gates, and Footfall needs video stream processing.
 - Deploys are run by hand over SSH. A GitHub Actions button is planned.

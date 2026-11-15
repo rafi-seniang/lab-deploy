@@ -22,6 +22,7 @@ fetch tiketa-app "$TIKETA_APP_REF"
 fetch tiketa-booking-agent "$TIKETA_AGENT_REF"
 fetch ai-engineering-lab "$LAB_WEB_REF"
 fetch dispatch-system1-router "$DISPATCH_REF"
+fetch gatekeeper-llm-gateway "$GATEKEEPER_REF"
 fetch lens-multimodal-search "$LENS_REF"
 
 [ -f data/lens/index.json ] && [ -f data/lens/vectors.npy ] || {
@@ -50,6 +51,8 @@ check() { # path, text the answer must contain
 }
 check /healthz ok
 check /dispatch/api/health ok
+check /gatekeeper/api/health ok
+check /gatekeeper/api/meta 'jev:jev-1.14.0'
 check /lens/api/health ok
 check /lens/api/v1/collection 'gemini-embedding-2'
 check /tiketa/healthz ok
