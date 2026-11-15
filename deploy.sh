@@ -44,7 +44,7 @@ check() { # path, text the answer must contain
 check /healthz ok
 check /tiketa/healthz ok
 check /tiketa/api/health ok
-check /tiketa/api/v1/cinema '"is_published":true'
+check /tiketa/api/meta '"mcp_path":"/mcp"'
 check /tiketa/agent/health ok
 
 docker image prune -f >/dev/null
