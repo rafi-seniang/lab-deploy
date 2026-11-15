@@ -57,6 +57,8 @@ check /gatekeeper/api/meta 'jev:jev-1.14.0'
 check /lens/api/health ok
 check /lens/api/v1/collection 'gemini-embedding-2'
 check /tiketa/healthz ok
+# A screen's own address answers with the app (nginx's fallback), so shared links and Back work
+check /tiketa/tickets '<div id="root">'
 check /tiketa/api/health ok
 check /tiketa/api/meta '"mcp_path":"/mcp"'
 check /tiketa/agent/health ok
