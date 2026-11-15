@@ -3,13 +3,17 @@
 	auto_https off
 	admin off
 	servers {
-		# cloudflared arrives from the compose network, so its X-Forwarded-For is the visitor's address
+		# cloudflared arrives from the compose network, so the X-Forwarded-For set below is passed on
 		trusted_proxies static private_ranges
 	}
 }
 
 :80 {
 	encode gzip
+
+	# Cloudflare sets CF-Connecting-IP to the visitor and overwrites any copy the visitor sends. X-Forwarded-For
+	# keeps whatever the visitor wrote in front, and the apps read its first entry, so it is replaced here
+	request_header X-Forwarded-For {http.request.header.CF-Connecting-IP}
 
 	# The booking API and its MCP server at /tiketa/api/mcp/
 	handle_path /tiketa/api/* {
