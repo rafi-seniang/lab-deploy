@@ -13,7 +13,7 @@ services:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN}
     depends_on: [edge]
 
-  # One host name, one path per site: /, /tiketa/, /tiketa/api/, /tiketa/agent/
+  # One host name, one path per site: /, /dispatch/api/, /lens/api/, /tiketa/, /tiketa/api/, /tiketa/agent/
   edge:
     <<: *restart
     image: caddy:2.11.7-alpine
@@ -51,6 +51,8 @@ services:
     build:
       context: ./src/ai-engineering-lab
       args:
+        VITE_PILAH_URL: ${SITE_URL}/dispatch/api
+        VITE_LENS_URL: ${SITE_URL}/lens/api
         VITE_TIKETA_URL: ${SITE_URL}/tiketa/api
         VITE_TIKETA_SITE_URL: ${SITE_URL}/tiketa/
 
@@ -111,5 +113,78 @@ services:
       redis: { condition: service_healthy }
       tiketa-api: { condition: service_healthy }
 
+  lens-typesense:
+    <<: *restart
+    image: typesense/typesense:27.1
+    command:
+      - "--data-dir"
+      - "/data"
+      - "--api-key"
+      - "${TYPESENSE_API_KEY}"
+      - "--enable-cors"
+    volumes:
+      - lens-typesense-data:/data
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8108 && printf 'GET /health HTTP/1.0\r\n\r\n' >&3 && grep -q 'true' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  dispatch-api:
+    <<: *restart
+    build:
+      context: ./src/dispatch-system1-router
+    command: sh -c "uvicorn main:app --host 0.0.0.0 --port 8010 --proxy-headers --no-access-log --workers 1"
+    environment:
+      ENVIRONMENT: production
+      TRIAGE_ENGINE: jev
+      JEV_API_KEY: ${JEV_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      CORS_ORIGINS: '["${SITE_URL}"]'
+      REDIS_URL: redis://redis:6379/2
+      RATE_LIMIT_PER_MINUTE: 60
+      DAILY_REQUESTS_PER_CALLER: 100
+      DAILY_REQUESTS_TOTAL: 1000
+      FORWARDED_ALLOW_IPS: "*"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      redis: { condition: service_healthy }
+
+  lens-api:
+    <<: *restart
+    build:
+      context: ./src/lens-multimodal-search
+    command: sh -c "uvicorn main:app --host 0.0.0.0 --port 8030 --proxy-headers --no-access-log --workers 1"
+    environment:
+      ENVIRONMENT: production
+      STORE_BACKEND: typesense
+      TYPESENSE_URL: http://lens-typesense:8108
+      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY}
+      TYPESENSE_COLLECTION: lens_photographs
+      VECTOR_SEARCH_EF: 200
+      COLLECTION_DIR: /collection
+      EMBEDDING_MODEL: gemini-embedding-2
+      EMBEDDING_DIMENSIONS: 768
+      MIN_PICTURE_SCORE: 0.335
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      CORS_ORIGINS: '["${SITE_URL}"]'
+      REDIS_URL: redis://redis:6379/3
+      RATE_LIMIT_PER_MINUTE: 60
+      DAILY_REQUESTS_PER_CALLER: 150
+      DAILY_REQUESTS_TOTAL: 1500
+      DAILY_UPLOADS_PER_CALLER: 10
+      DAILY_UPLOADS_TOTAL: 100
+      FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      - ./data/lens:/collection
+    depends_on:
+      redis: { condition: service_healthy }
+      lens-typesense: { condition: service_healthy }
+
 volumes:
   postgres-data:
+  lens-typesense-data:
