@@ -141,6 +141,8 @@ services:
       TRIAGE_ENGINE: jev
       JEV_API_KEY: ${JEV_API_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_API_KEY_2: ${GEMINI_API_KEY_2:-}
+      GEMINI_API_KEY_3: ${GEMINI_API_KEY_3:-}
       CORS_ORIGINS: '["${SITE_URL}"]'
       REDIS_URL: redis://redis:6379/2
       RATE_LIMIT_PER_MINUTE: 60
@@ -170,8 +172,10 @@ services:
       COLLECTION_DIR: /collection
       EMBEDDING_MODEL: gemini-embedding-2
       EMBEDDING_DIMENSIONS: 768
-      MIN_PICTURE_SCORE: 0.335
+      MIN_PICTURE_SCORE: 0.35
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_API_KEY_2: ${GEMINI_API_KEY_2:-}
+      GEMINI_API_KEY_3: ${GEMINI_API_KEY_3:-}
       CORS_ORIGINS: '["${SITE_URL}"]'
       REDIS_URL: redis://redis:6379/3
       RATE_LIMIT_PER_MINUTE: 60
