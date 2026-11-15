@@ -28,6 +28,16 @@
 		reverse_proxy tiketa-web:8080
 	}
 
+	# Dispatch (System 1 decision router API)
+	handle_path /dispatch/api/* {
+		reverse_proxy dispatch-api:8010
+	}
+
+	# Lens (multimodal vector search API and photographs)
+	handle_path /lens/api/* {
+		reverse_proxy lens-api:8030
+	}
+
 	# The Lab is the site itself
 	handle {
 		reverse_proxy lab-web:8080

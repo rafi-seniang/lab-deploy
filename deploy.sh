@@ -21,6 +21,13 @@ mkdir -p src
 fetch tiketa-app "$TIKETA_APP_REF"
 fetch tiketa-booking-agent "$TIKETA_AGENT_REF"
 fetch ai-engineering-lab "$LAB_WEB_REF"
+fetch dispatch-system1-router "$DISPATCH_REF"
+fetch lens-multimodal-search "$LENS_REF"
+
+[ -f data/lens/index.json ] && [ -f data/lens/vectors.npy ] || {
+  echo "Missing ./data/lens (index.json and vectors.npy). Sync assets/lens to ./data/lens first." >&2
+  exit 1
+}
 
 echo "== build"
 docker compose build --quiet
@@ -42,6 +49,9 @@ check() { # path, text the answer must contain
   echo "ok $1"
 }
 check /healthz ok
+check /dispatch/api/health ok
+check /lens/api/health ok
+check /lens/api/v1/collection 'gemini-embedding-2'
 check /tiketa/healthz ok
 check /tiketa/api/health ok
 check /tiketa/api/meta '"mcp_path":"/mcp"'

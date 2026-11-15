@@ -5,16 +5,20 @@ open to the internet except SSH.
 
 ```
 visitor ── HTTPS ──► Cloudflare ── tunnel ──► cloudflared ──► edge (Caddy)
-                                                              ├─ /                 lab-web       the Lab (portfolio)
+                                                              ├─ /                 lab-web       the Lab (portfolio, /dispatch, /lens)
+                                                              ├─ /dispatch/api/    dispatch-api  Dispatch (Jev default + Gemini Decision 1)
+                                                              ├─ /lens/api/        lens-api      Lens (Gemini Embedding 2 + Typesense)
                                                               ├─ /tiketa/          tiketa-web    cinema booking site
                                                               ├─ /tiketa/api/      tiketa-api    booking API, MCP at /tiketa/api/mcp/
                                                               └─ /tiketa/agent/    tiketa-agent  LangGraph chat agent
-                                              postgres (tiketa, tiketa_agent)   redis
+                                              postgres (tiketa, tiketa_agent)   redis (DB 0..3)   lens-typesense (27.1)
 ```
 
 | Repository | What runs from it |
 |---|---|
 | [ai-engineering-lab](https://github.com/rafi-seniang/ai-engineering-lab) | `lab-web` |
+| [dispatch-system1-router](https://github.com/rafi-seniang/dispatch-system1-router) | `dispatch-api` |
+| [lens-multimodal-search](https://github.com/rafi-seniang/lens-multimodal-search) | `lens-api` |
 | [tiketa-app](https://github.com/rafi-seniang/tiketa-app) | `tiketa-api`, `tiketa-web` |
 | [tiketa-booking-agent](https://github.com/rafi-seniang/tiketa-booking-agent) | `tiketa-agent` |
 
@@ -45,6 +49,8 @@ visitor ── HTTPS ──► Cloudflare ── tunnel ──► cloudflared �
     sudo bash server/setup.sh                 # once, on a fresh Ubuntu 24.04
     git clone https://github.com/rafi-seniang/lab-deploy.git /srv/lab/deploy && cd /srv/lab/deploy
     cp .env.example .env && chmod 600 .env    # fill it in
+    # copy the pre-indexed Lens archive (index.json, vectors.npy, *.jpg, uploads/) to data/lens/
+    mkdir -p data/lens && chown -R 10001:10001 data/lens
     ./deploy.sh
     sudo bash server/install-cron.sh
 
@@ -60,8 +66,7 @@ Change a commit in `refs.env`, push, then on the host:
 
 ## Not here yet
 
-- Backups stay on the host. A copy elsewhere is not set up.
+- Backups stay on the host (`postgres` dumps via `backup.sh`), while `data/lens/uploads/` lives only in `./data/lens`.
 - No uptime check from outside.
-- The other Lab services (Gatekeeper, Lens, Dispatch, Ledger) are not deployed: they have no guest sessions or
-  spending caps yet, and two of them need a GPU.
+- Gatekeeper and Ledger are not deployed yet: Gatekeeper waits on its switches and caps, and Ledger needs a VLM API key or GPU.
 - Deploys are run by hand over SSH. A GitHub Actions button is planned.
