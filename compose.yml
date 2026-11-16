@@ -203,11 +203,7 @@ services:
       CORS_ORIGINS: '["${SITE_URL}"]'
       UPSTREAM_BASE_URL: https://api.deepseek.com
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
-      SMALL_MODEL: deepseek-flash
-      STRONG_MODEL: deepseek-v4-pro
-      DECISION_PROTOCOL: openai_logprobs
-      DECISION_BASE_URL: https://api.deepseek.com
-      DECISION_MODEL: deepseek-flash
+      UPSTREAM_MODEL: deepseek-flash
       INJECTION_GUARD: jev
       JEV_API_KEY: ${JEV_API_KEY}
       JEV_MODEL: jev-1.14.0
