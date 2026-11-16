@@ -7,7 +7,7 @@ open to the internet except SSH.
 visitor ── HTTPS ──► Cloudflare ── tunnel ──► cloudflared ──► edge (Caddy)
                                                               ├─ /                 lab-web         the Lab (portfolio, /dispatch, /gatekeeper, /lens)
                                                               ├─ /dispatch/api/    dispatch-api    Dispatch (Jev default + Gemini Decision 1)
-                                                              ├─ /gatekeeper/api/  gatekeeper-api  Gatekeeper (IndoPII masking + Jev guard)
+                                                              ├─ /gatekeeper/api/  gatekeeper-api  Gatekeeper (Jev guard, one upstream model)
                                                               ├─ /lens/api/        lens-api        Lens (Gemini Embedding 2 + Typesense)
                                                               ├─ /tiketa/          tiketa-web      cinema booking site
                                                               ├─ /tiketa/api/      tiketa-api      booking API, MCP at /tiketa/api/mcp/
@@ -31,7 +31,9 @@ visitor ── HTTPS ──► Cloudflare ── tunnel ──► cloudflared �
 | One host name with paths | The sites share an origin, so the guest cookie and the browser's requests need no cross-site rules |
 | Cloudflare Tunnel, no published ports | TLS and the certificate are Cloudflare's. The host accepts no web traffic directly, and Docker's published ports would go around the firewall |
 | Images built on the host from pinned commits | No registry and no registry credentials. `refs.env` says exactly which commit of each application runs. A registry and a deploy button can come later |
-| Secrets only in `.env` on the host | This repository is public and holds none |
+| Secrets only in `.env` on the host | This repository is public and holds none. `GATEKEEPER_TRUSTED_KEY` there is the key the Tiketa agent sends to Gatekeeper |
+| Tiketa's chat goes through Gatekeeper | The agent asks `gatekeeper-api` over the internal network to check each message, with the scope `tiketa` kept in Gatekeeper (`NAMED_SCOPES` in `compose.yml`) |
+| Cloudflare lets MCP clients through | A Configuration Rule turns Browser Integrity Check off for `/tiketa/api/mcp`. Without it Python clients get error 1010 |
 | The chat agent's model key belongs to this host alone | It can be revoked without touching anything else, and its prepaid balance is the spending cap. The agent also stops at 1,000,000 model tokens a day |
 
 ## Files
