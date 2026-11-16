@@ -112,10 +112,15 @@ services:
       DAILY_TOKENS_TOTAL: 1000000
       PHOENIX_COLLECTOR_ENDPOINT: ""
       FORWARDED_ALLOW_IPS: "*"
+      # Every visitor message is checked by Gatekeeper first, with the scope it keeps as "tiketa"
+      GATEKEEPER_URL: http://gatekeeper-api:8020
+      GATEKEEPER_API_KEY: ${GATEKEEPER_TRUSTED_KEY}
+      GATEKEEPER_SCOPE_NAME: tiketa
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       tiketa-api: { condition: service_healthy }
+      gatekeeper-api: { condition: service_healthy }
 
   lens-typesense:
     <<: *restart
@@ -213,6 +218,9 @@ services:
       BLOCK_FROM_INJECTION_PROBABILITY: 0.90
       BLOCK_FROM_OFF_TOPIC_PROBABILITY: 0.90
       MASK_IDENTIFIERS_ENABLED: "false"
+      # Tiketa's agent uses this key: it skips the daily caps meant for visitors
+      TRUSTED_API_KEYS: ${GATEKEEPER_TRUSTED_KEY}
+      NAMED_SCOPES: '{"tiketa": "booking cinema tickets at Tiketa: films, showtimes, seats, prices and bookings, including short replies to the assistant such as greetings, numbers, yes or no, days, times, seat ids and names"}'
       AGENT_GUARD_ENABLED: "true"
       REDIS_URL: redis://redis:6379/4
       RATE_LIMIT_PER_MINUTE: 120
